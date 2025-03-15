@@ -26,23 +26,28 @@ config = RunConfig(
 )
 
 agent = Agent(
-    instructions="You are a helpful assistant.",
+    instructions="You are Tylon, a helpful AI Agent.",
     name="Tylon"
 )
 
-# response = Runner.run_sync(
-#     starting_agent=agent,
-#     input="What is an AI Agent??",
-#     run_config=config
-# )
-
-# print(response.final_output)
+@cl.on_chat_start
+async def handle_chat_history():
+    cl.user_session.set("history", [])
+    await cl.Message(content="Hi there! I'm Tylon, your AI Agent.").send()
 
 @cl.on_message
 async def handle_message(msg: cl.Message):
+
+    chat_history = cl.user_session.get("history")
+
+    chat_history.append({"role": "user", "content": msg.content})
+
     result = await Runner.run(
         starting_agent=agent,
-        input=msg.content,
+        input=chat_history,
         run_config=config
     )
-    await cl.Message(content = result.final_output).send()
+    chat_history.append({"role": "assistant", "content": result.final_output})
+    cl.user_session.set("history", chat_history)
+
+    await cl.Message(content=result.final_output).send()
