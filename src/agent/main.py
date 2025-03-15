@@ -1,4 +1,6 @@
 from agents import Agent, Runner, RunConfig, OpenAIChatCompletionsModel, AsyncOpenAI
+from openai.types.responses import ResponseTextDeltaEvent
+
 import chainlit as cl
 
 from dotenv import load_dotenv
@@ -43,23 +45,31 @@ async def handle_chat_history():
     await cl.Message(content="Hi there! I'm Tylon, your AI Agent.").send()
 
 @cl.on_message
-async def handle_message(msg: cl.Message):
+async def handle_messages(message: cl.Message):
     # Retrieve the chat history from the user session
     chat_history = cl.user_session.get("history")
 
     # Append the user's message to the chat history
-    chat_history.append({"role": "user", "content": msg.content})
+    chat_history.append({"role": "user", "content": message.content})
+    
+    msg = cl.Message(content="")
 
-    # Run the agent
-    result = await Runner.run(
+    # Stream agent's response
+    result = Runner.run_streamed(
         starting_agent=agent,
         input=chat_history,
         run_config=config
     )
-    
-    chat_history.append({"role": "assistant", "content": result.final_output})
+
+    full_response = "" 
+    # Stream the message in app
+    async for event in result.stream_events():
+        if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+            if token := event.data.delta or "":
+                await msg.stream_token(token)
+
+            full_response += token 
+
+    chat_history.append({"role": "assistant", "content": full_response})
     # Update chat history
     cl.user_session.set("history", chat_history)
-
-    # Display Agent's response
-    await cl.Message(content=result.final_output).send()
