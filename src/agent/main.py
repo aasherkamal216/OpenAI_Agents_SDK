@@ -1,8 +1,10 @@
-from agents import Agent, Runner, RunConfig, OpenAIChatCompletionsModel, AsyncOpenAI
+from agents import Agent, Runner, RunConfig, OpenAIChatCompletionsModel, AsyncOpenAI, function_tool
 from openai.types.responses import ResponseTextDeltaEvent
 
 import chainlit as cl
+from tavily import TavilyClient
 
+from typing import Literal
 from dotenv import load_dotenv
 import os
 
@@ -30,11 +32,34 @@ config = RunConfig(
     tracing_disabled=True  # Disable tracing for this run
 )
 
+@function_tool
+@cl.step(type="tool")
+def web_search(q: str, mode: Literal["basic", "advanced"]):
+    """
+    A tool to perform a web search
+
+    Parameters:
+    - q (str): The search query string.
+    - mode (Literal["basic", "advanced"]): The search mode, which can be either "basic" for a simple search
+      or "advanced" for a more detailed search.
+
+    Returns:
+    - response: The response from the search results.
+    """
+    tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+    response = tavily_client.search(query=q, search_depth=mode)
+
+    print(response)
+    return response
+
 # Create Agent
 agent = Agent(
     instructions="You are Tylon, a helpful AI Agent.",
-    name="Tylon"
+    name="Tylon",
+    tools=[web_search]
 )
+
+
 
 # Handle Chat History
 @cl.on_chat_start
@@ -68,7 +93,6 @@ async def handle_messages(message: cl.Message):
             if token := event.data.delta or "":
                 await msg.stream_token(token)
 
-            full_response += token 
 
     chat_history.append({"role": "assistant", "content": full_response})
     # Update chat history

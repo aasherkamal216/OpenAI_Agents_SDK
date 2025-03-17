@@ -12,4 +12,5 @@ dependencies = [
     "mcp-python>=0.1.4",
     "openai-agents>=0.0.4",
     "python-dotenv>=1.0.1",
+    "tavily-python>=0.5.1",
 ]
