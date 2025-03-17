@@ -7,6 +7,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "chainlit" },
+    { name = "mcp-python" },
     { name = "openai-agents" },
     { name = "python-dotenv" },
 ]
@@ -14,6 +15,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "chainlit", specifier = ">=2.4.1" },
+    { name = "mcp-python", specifier = ">=0.1.4" },
     { name = "openai-agents", specifier = ">=0.0.4" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
 ]
@@ -440,6 +442,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/50/cc/5c5bb19f1a0f8f89a95e25cb608b0b07009e81fd4b031e519335404e1422/mcp-1.4.1.tar.gz", hash = "sha256:b9655d2de6313f9d55a7d1df62b3c3fe27a530100cc85bf23729145b0dba4c7a", size = 154942 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e8/0e/885f156ade60108e67bf044fada5269da68e29d758a10b0c513f4d85dd76/mcp-1.4.1-py3-none-any.whl", hash = "sha256:a7716b1ec1c054e76f49806f7d96113b99fc1166fc9244c2c6f19867cb75b593", size = 72448 },
+]
+
+[[package]]
+name = "mcp-python"
+version = "0.1.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mcp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e7/66/b6e5311c793b25b19ac9177bfbbabca867c1beb61b2cc813aa031574370d/mcp_python-0.1.4.tar.gz", hash = "sha256:0a85ed659141126cc115da90fb139c542a9dbd0c107bc3273c3e8e8f23d8b6b1", size = 15556 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/5f/4d429de941b7b89fcf30940f4199055e334088f83729af904d141850b375/mcp_python-0.1.4-py3-none-any.whl", hash = "sha256:9c86bc3017c7317a4980dab2a8301fc58389c44dd8c0bd9a65832f9c3870d6b8", size = 5780 },
 ]
 
 [[package]]
