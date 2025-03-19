@@ -116,21 +116,8 @@ You have access to the following tools to assist in diagnosing patients:
 - Avoid making definitive diagnoses or providing medical treatment. Instead, guide the patient towards understanding their symptoms and recommend they consult a healthcare professional for a formal diagnosis and treatment plan.
 """,
         name="Doctor AI",
-        tools=[
-            web_search,
-            cardio_agent.as_tool(
-                tool_name="consult_cardio_agent",
-                tool_description="An expert cardiologist to consult heart-related diseases.",
-            ),
-            neuro_agent.as_tool(
-                tool_name="consult_neuro_agent",
-                tool_description="A neurology specialist to consult brain-related diseases.",
-            ),
-            derm_agent.as_tool(
-                tool_name="consult_derm_agent",
-                tool_description="A dermatologist to consult skin-related diseases.",
-            ),
-               ],
+        tools=[web_search],
+        handoffs=[cardio_agent, neuro_agent, derm_agent]
     )
 
     # Store specialist agents in a dictionary
@@ -176,7 +163,6 @@ async def handle_messages(message: cl.Message):
 
     # Stream the message in app
     async for event in result.stream_events():
-        print(f"\n============ {event} ============\n")
         if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
             if token := event.data.delta or "":
                 await msg.stream_token(token)
