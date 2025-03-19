@@ -54,6 +54,14 @@ async def start():
         tracing_disabled=True, 
     )
 
+    # Create Doctor Agent
+    doctor_agent = Agent(
+        instructions=DOCTOR_AGENT_PROMPT,
+        name="Doctor AI",
+        tools=[web_search],
+        handoffs=[]
+    )
+
     # Create Specialist Agents
     cardio_agent = Agent(
         instructions=(
@@ -63,6 +71,7 @@ async def start():
         ),
         name="Cardiologist AI",
         tools=[web_search],
+        handoffs=[doctor_agent]
     )
 
     derm_agent = Agent(
@@ -73,6 +82,7 @@ async def start():
         ),
         name="Dermatologist AI",
         tools=[web_search],
+        handoffs=[doctor_agent]
     )
 
     neuro_agent = Agent(
@@ -83,28 +93,15 @@ async def start():
         ),
         name="Neurologist AI",
         tools=[web_search],
+        handoffs=[doctor_agent]
     )
 
-    # Create Doctor Agent
-    doctor_agent = Agent(
-        instructions=DOCTOR_AGENT_PROMPT,
-        name="Doctor AI",
-        tools=[web_search],
-        handoffs=[cardio_agent, neuro_agent, derm_agent]
-    )
-
-    # Store specialist agents in a dictionary
-    specialist_agents = {
-        "cardiology": cardio_agent,
-        "dermatology": derm_agent,
-        "neurology": neuro_agent,
-    }
+    doctor_agent.handoffs = [cardio_agent, neuro_agent, derm_agent]
 
     # Set Agent and Config in session
     cl.user_session.set("config", config)
     # cl.user_session.set("agent", agent) # Removed the default agent
     cl.user_session.set("agent", doctor_agent) # Set the doctor agent
-    cl.user_session.set("specialist_agents", specialist_agents) # Store specialist agents
 
     # Initialize the chat history in the user session
     cl.user_session.set("history", [])
