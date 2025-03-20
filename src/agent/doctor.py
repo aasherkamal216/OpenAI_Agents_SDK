@@ -4,7 +4,9 @@ from agents import (
     RunConfig,
     OpenAIChatCompletionsModel,
     AsyncOpenAI,
+    RunContextWrapper,
     function_tool,
+    handoff
 )
 from openai.types.responses import ResponseTextDeltaEvent
 
@@ -22,7 +24,12 @@ _: bool = load_dotenv()
 
 gemini_api_key = os.getenv("GOOGLE_API_KEY")
 
-
+def handoff_func(agent: Agent, ctx: RunContextWrapper[None]):
+    agent_name = agent.name
+    print("=" * 40)
+    print(f"\n>> Handing off to: {agent_name} <<\n")
+    print("=" * 40)
+    
 @function_tool
 @cl.step(type="tool")
 def web_search(query: str):
@@ -59,7 +66,8 @@ async def start():
         instructions=DOCTOR_AGENT_PROMPT,
         name="Doctor AI",
         tools=[web_search],
-        handoffs=[]
+        handoffs=[],
+        handoff_description="A chief specialist doctor"
     )
 
     # Create Specialist Agents
@@ -68,10 +76,12 @@ async def start():
             "You are a cardiology specialist AI agent. "
             "You provide expert advice on heart-related issues. "
             "Use the `web_search` tool to research medical information. "
+            "Handoff to `doctor_agent` if the user wants to talk."
         ),
         name="Cardiologist AI",
         tools=[web_search],
-        handoffs=[doctor_agent]
+        handoffs=[doctor_agent],
+        handoff_description="A cardiology specialist doctor"
     )
 
     derm_agent = Agent(
@@ -79,10 +89,12 @@ async def start():
             "You are a dermatology specialist AI agent. "
             "You provide expert advice on skin-related issues. "
             "Use the `web_search` tool to research medical information. "
+            "Handoff to `doctor_agent` if the user wants to talk."
         ),
         name="Dermatologist AI",
         tools=[web_search],
-        handoffs=[doctor_agent]
+        handoffs=[doctor_agent],
+        handoff_description="A dermatology specialist doctor"
     )
 
     neuro_agent = Agent(
@@ -90,13 +102,19 @@ async def start():
             "You are a neurology specialist AI agent. "
             "You provide expert advice on brain-related issues. "
             "Use the `web_search` tool to research medical information. "
+            "Handoff to `doctor_agent` if the user wants to talk."
         ),
         name="Neurologist AI",
         tools=[web_search],
-        handoffs=[doctor_agent]
+        handoffs=[doctor_agent],
+        handoff_description="A neurology specialist doctor"
     )
 
-    doctor_agent.handoffs = [cardio_agent, neuro_agent, derm_agent]
+    doctor_agent.handoffs = [
+        handoff(cardio_agent, on_handoff=lambda ctx: handoff_func(cardio_agent, ctx)),
+        handoff(derm_agent, on_handoff=lambda ctx: handoff_func(derm_agent, ctx)),
+        handoff(neuro_agent, on_handoff=lambda ctx: handoff_func(neuro_agent, ctx))
+        ]
 
     # Set Agent and Config in session
     cl.user_session.set("config", config)
