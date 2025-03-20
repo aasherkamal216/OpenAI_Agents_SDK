@@ -26,10 +26,12 @@ gemini_api_key = os.getenv("GOOGLE_API_KEY")
 
 def handoff_func(agent: Agent, ctx: RunContextWrapper[None]):
     agent_name = agent.name
-    print("=" * 40)
-    print(f"\n>> Handing off to: {agent_name} <<\n")
-    print("=" * 40)
-    
+    border = "+" + "-" * 40 + "+"
+
+    print(border)
+    print(f"|{f'Handing off to: {agent_name}':^40}|")
+    print(border)
+
 @function_tool
 @cl.step(type="tool")
 def web_search(query: str):
@@ -80,7 +82,7 @@ async def start():
         ),
         name="Cardiologist AI",
         tools=[web_search],
-        handoffs=[doctor_agent],
+        handoffs=[handoff(doctor_agent, on_handoff=lambda ctx: handoff_func(doctor_agent, ctx))],
         handoff_description="A cardiology specialist doctor"
     )
 
@@ -93,7 +95,7 @@ async def start():
         ),
         name="Dermatologist AI",
         tools=[web_search],
-        handoffs=[doctor_agent],
+        handoffs=[handoff(doctor_agent, on_handoff=lambda ctx: handoff_func(doctor_agent, ctx))],
         handoff_description="A dermatology specialist doctor"
     )
 
@@ -106,7 +108,7 @@ async def start():
         ),
         name="Neurologist AI",
         tools=[web_search],
-        handoffs=[doctor_agent],
+        handoffs=[handoff(doctor_agent, on_handoff=lambda ctx: handoff_func(doctor_agent, ctx))],
         handoff_description="A neurology specialist doctor"
     )
 
