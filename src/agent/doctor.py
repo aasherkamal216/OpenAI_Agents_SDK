@@ -8,6 +8,7 @@ from agents import (
     function_tool,
     handoff
 )
+from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 from openai.types.responses import ResponseTextDeltaEvent
 
 import chainlit as cl
@@ -65,17 +66,19 @@ async def start():
 
     # Create Doctor Agent
     doctor_agent = Agent(
-        instructions=DOCTOR_AGENT_PROMPT,
+        instructions=RECOMMENDED_PROMPT_PREFIX + DOCTOR_AGENT_PROMPT,
         name="Doctor AI",
         tools=[web_search],
         handoffs=[],
-        handoff_description="A chief specialist doctor"
+        handoff_description="A Chief Doctor Agent for general inquiries and diagnosis"
     )
 
     # Create Specialist Agents
     cardio_agent = Agent(
         instructions=(
-            "You are a cardiology specialist AI agent. "
+            f"{RECOMMENDED_PROMPT_PREFIX}"
+            "You are a Cardiology Specialist AI agent. "
+            "If you are speaking to a patient, you probably were transferred to from the doctor AI Agent."
             "You provide expert advice on heart-related issues. "
             "Use the `web_search` tool to research medical information. "
             "Handoff to `doctor_agent` if the user wants to talk."
@@ -83,12 +86,14 @@ async def start():
         name="Cardiologist AI",
         tools=[web_search],
         handoffs=[handoff(doctor_agent, on_handoff=lambda ctx: handoff_func(doctor_agent, ctx))],
-        handoff_description="A cardiology specialist doctor"
+        handoff_description="A Cardiology Specialist Doctor"
     )
 
     derm_agent = Agent(
         instructions=(
-            "You are a dermatology specialist AI agent. "
+            f"{RECOMMENDED_PROMPT_PREFIX}"
+            "You are a Dermatology Specialist AI agent. "
+            "If you are speaking to a patient, you probably were transferred to from the doctor AI Agent."
             "You provide expert advice on skin-related issues. "
             "Use the `web_search` tool to research medical information. "
             "Handoff to `doctor_agent` if the user wants to talk."
@@ -96,12 +101,14 @@ async def start():
         name="Dermatologist AI",
         tools=[web_search],
         handoffs=[handoff(doctor_agent, on_handoff=lambda ctx: handoff_func(doctor_agent, ctx))],
-        handoff_description="A dermatology specialist doctor"
+        handoff_description="A Dermatology Specialist Doctor"
     )
 
     neuro_agent = Agent(
         instructions=(
-            "You are a neurology specialist AI agent. "
+            f"{RECOMMENDED_PROMPT_PREFIX}"
+            "You are a Neurology Specialist AI agent. "
+            "If you are speaking to a patient, you probably were transferred to from the doctor AI Agent."
             "You provide expert advice on brain-related issues. "
             "Use the `web_search` tool to research medical information. "
             "Handoff to `doctor_agent` if the user wants to talk."
@@ -109,7 +116,7 @@ async def start():
         name="Neurologist AI",
         tools=[web_search],
         handoffs=[handoff(doctor_agent, on_handoff=lambda ctx: handoff_func(doctor_agent, ctx))],
-        handoff_description="A neurology specialist doctor"
+        handoff_description="A Neurology Specialist Doctor"
     )
 
     doctor_agent.handoffs = [
@@ -139,12 +146,12 @@ async def handle_messages(message: cl.Message):
     msg = cl.Message(content="")
 
     # Get Config and Agent from user session
-    agent: Agent = cast(Agent, cl.user_session.get("agent"))
+    current_agent: Agent = cast(Agent, cl.user_session.get("agent"))
     config: RunConfig = cast(RunConfig, cl.user_session.get("config"))
 
     # Stream agent's response
     result = Runner.run_streamed(
-        starting_agent=agent,
+        starting_agent=current_agent,
         input=chat_history,
         run_config=config
     )
@@ -158,7 +165,9 @@ async def handle_messages(message: cl.Message):
                 await msg.stream_token(token)
 
             full_response += token 
-
-    chat_history.append({"role": "assistant", "content": full_response})
+    
     # Update chat history
+    chat_history.append({"role": "assistant", "content": full_response})
+
     cl.user_session.set("history", chat_history)
+    cl.user_session.set("agent", result.last_agent) # set the last agent to the current agent
