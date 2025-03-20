@@ -81,7 +81,8 @@ async def start():
             "If you are speaking to a patient, you probably were transferred to from the doctor AI Agent."
             "You provide expert advice on heart-related issues. "
             "Use the `web_search` tool to research medical information. "
-            "Handoff to `doctor_agent` if the user wants to talk."
+            "ALWAYS handoff to `doctor_agent` if the user wants to talk. "
+            "REMEMBER: Do NOT pretend to be Chief Doctor Agent"
         ),
         name="Cardiologist AI",
         tools=[web_search],
@@ -96,7 +97,8 @@ async def start():
             "If you are speaking to a patient, you probably were transferred to from the doctor AI Agent."
             "You provide expert advice on skin-related issues. "
             "Use the `web_search` tool to research medical information. "
-            "Handoff to `doctor_agent` if the user wants to talk."
+            "ALWAYS handoff to `doctor_agent` if the user wants to talk. "
+            "REMEMBER: Do NOT pretend to be Chief Doctor Agent"
         ),
         name="Dermatologist AI",
         tools=[web_search],
@@ -111,7 +113,8 @@ async def start():
             "If you are speaking to a patient, you probably were transferred to from the doctor AI Agent."
             "You provide expert advice on brain-related issues. "
             "Use the `web_search` tool to research medical information. "
-            "Handoff to `doctor_agent` if the user wants to talk."
+            "ALWAYS handoff to `doctor_agent` if the user wants to talk. "
+            "REMEMBER: Do NOT pretend to be Chief Doctor Agent"
         ),
         name="Neurologist AI",
         tools=[web_search],
@@ -127,7 +130,6 @@ async def start():
 
     # Set Agent and Config in session
     cl.user_session.set("config", config)
-    # cl.user_session.set("agent", agent) # Removed the default agent
     cl.user_session.set("agent", doctor_agent) # Set the doctor agent
 
     # Initialize the chat history in the user session
@@ -149,6 +151,7 @@ async def handle_messages(message: cl.Message):
     current_agent: Agent = cast(Agent, cl.user_session.get("agent"))
     config: RunConfig = cast(RunConfig, cl.user_session.get("config"))
 
+    print("========", current_agent.name, "==========")
     # Stream agent's response
     result = Runner.run_streamed(
         starting_agent=current_agent,
