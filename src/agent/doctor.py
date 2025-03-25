@@ -14,7 +14,8 @@ from openai.types.responses import ResponseTextDeltaEvent
 import chainlit as cl
 from tavily import TavilyClient
 
-from agent.prompts import DOCTOR_AGENT_PROMPT
+
+from prompts import DOCTOR_AGENT_PROMPT
 
 from typing import cast
 from dotenv import load_dotenv
@@ -23,8 +24,9 @@ import os
 # Load the environment variables
 _: bool = load_dotenv()
 
-gemini_api_key = os.getenv("GOOGLE_API_KEY")
+gemini_api_key = os.getenv("OPENROUTER_API_KEY")
 
+@cl.step(type="llm")
 def handoff_func(agent: Agent, ctx: RunContextWrapper[None]):
     agent_name = agent.name
     border = "+" + "-" * 40 + "+"
@@ -51,11 +53,11 @@ async def start():
     # Initialize the AsyncOpenAI client
     client = AsyncOpenAI(
         api_key=gemini_api_key,
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        base_url="https://openrouter.ai/api/v1",
     )
 
     # Create the model instance
-    model = OpenAIChatCompletionsModel(model="gemini-2.0-flash", openai_client=client)
+    model = OpenAIChatCompletionsModel(model="deepseek/deepseek-chat-v3-0324", openai_client=client)
 
     # Configure the run settings for the agent
     config = RunConfig(
