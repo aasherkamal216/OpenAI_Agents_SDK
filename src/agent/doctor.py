@@ -168,9 +168,9 @@ async def handle_messages(message: cl.Message):
         if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
             if token := event.data.delta or "":
                 await msg.stream_token(token)
-
-            full_response += token 
     
+            full_response += token 
+    await msg.send()
     # Update chat history
     chat_history.append({"role": "assistant", "content": full_response})
 
