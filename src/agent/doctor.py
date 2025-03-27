@@ -6,10 +6,12 @@ from agents import (
     AsyncOpenAI,
     RunContextWrapper,
     function_tool,
-    handoff
+    handoff,
+    HandoffInputData
 )
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 from openai.types.responses import ResponseTextDeltaEvent
+from agents.extensions import handoff_filters
 
 import chainlit as cl
 from tavily import TavilyClient
@@ -18,13 +20,46 @@ from tavily import TavilyClient
 from prompts import DOCTOR_AGENT_PROMPT
 
 from typing import cast
+from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 
 # Load the environment variables
 _: bool = load_dotenv()
 
-gemini_api_key = os.getenv("OPENROUTER_API_KEY")
+gemini_api_key = os.getenv("GOOGLE_API_KEY")
+
+
+def agent_handoff_message_filter(handoff_message_data: HandoffInputData) -> HandoffInputData:
+    # First, we'll remove any tool-related messages from the message history
+    handoff_message_data = handoff_filters.remove_all_tools(handoff_message_data)
+
+    # Second, we'll only pass the last two items from history
+    history = (
+        tuple(handoff_message_data.input_history[-2:])
+        if isinstance(handoff_message_data.input_history, tuple)
+        else handoff_message_data.input_history
+    )
+
+    return HandoffInputData(
+        input_history=history,
+        pre_handoff_items=tuple(handoff_message_data.pre_handoff_items),
+        new_items=tuple(handoff_message_data.new_items),
+    )
+
+class SpecializedAgentData(BaseModel):
+    agent_name: str
+    reason: str
+
+@cl.step(type="llm")
+async def on_handoff(ctx: RunContextWrapper[None], input_data: SpecializedAgentData):
+    agent_name = input_data.agent_name
+    border = "+" + "-" * 60 + "+"
+
+    print(border)
+    print(f"|{f'Handing off to: {agent_name}':^60}|")
+    print(f"|{f'Reason: {input_data.reason}':^60}|")
+    print(border)
 
 @cl.step(type="llm")
 def handoff_func(agent: Agent, ctx: RunContextWrapper[None]):
@@ -53,11 +88,11 @@ async def start():
     # Initialize the AsyncOpenAI client
     client = AsyncOpenAI(
         api_key=gemini_api_key,
-        base_url="https://openrouter.ai/api/v1",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
     )
 
     # Create the model instance
-    model = OpenAIChatCompletionsModel(model="deepseek/deepseek-chat-v3-0324", openai_client=client)
+    model = OpenAIChatCompletionsModel(model="gemini-2.0-flash", openai_client=client)
 
     # Configure the run settings for the agent
     config = RunConfig(
@@ -88,7 +123,8 @@ async def start():
         ),
         name="Cardiologist AI",
         tools=[web_search],
-        handoffs=[handoff(doctor_agent, on_handoff=lambda ctx: handoff_func(doctor_agent, ctx))],
+        handoffs=[handoff(doctor_agent, 
+                          on_handoff=lambda ctx: handoff_func(doctor_agent, ctx))],
         handoff_description="A Cardiology Specialist Doctor"
     )
 
@@ -124,11 +160,17 @@ async def start():
         handoff_description="A Neurology Specialist Doctor"
     )
 
+    # Define handoffs for the Main Doctor Agent
+    specialist_agents = [cardio_agent, derm_agent, neuro_agent]
     doctor_agent.handoffs = [
-        handoff(cardio_agent, on_handoff=lambda ctx: handoff_func(cardio_agent, ctx)),
-        handoff(derm_agent, on_handoff=lambda ctx: handoff_func(derm_agent, ctx)),
-        handoff(neuro_agent, on_handoff=lambda ctx: handoff_func(neuro_agent, ctx))
-        ]
+        handoff(
+            agent,
+            on_handoff=on_handoff,
+            input_type=SpecializedAgentData,
+            input_filter=agent_handoff_message_filter,
+        )
+        for agent in specialist_agents
+    ]
 
     # Set Agent and Config in session
     cl.user_session.set("config", config)
